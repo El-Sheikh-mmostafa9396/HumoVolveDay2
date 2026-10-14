@@ -1,6 +1,7 @@
 ﻿using HumoVolveDay2.Data;
 using HumoVolveDay2.DTOs;
 using HumoVolveDay2.Models;
+using HumoVolveDay2.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,32 +28,21 @@ namespace HumoVolveDay2.Controllers
             {
                 return BadRequest("Invalid pagination parameters.");
             }
-
             var query = _context.Product.AsNoTracking();
 
-            var totalCount = await query.CountAsync();
-
-            var products = await query
+            // Use pagination helper extension to create a paged result (caller applies ordering)
+            var paged = await query
                 .OrderBy(p => p.Id)
-                .Select(p => new ProductReadDto
+                .ToPagedResultAsync(pageNumber, pageSize, p => new ProductReadDto
                 {
                     Id = p.Id,
                     Name = p.Name,
                     Price = p.Price,
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name
-                })
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+                });
 
-            return Ok(new
-            {
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                TotalCount = totalCount,
-                Products = products
-            });
+            return Ok(paged);
         }
 
         [HttpPut("{id}")]
